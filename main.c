@@ -13,20 +13,49 @@
 #define NONE 0
 #define BLACK 1
 #define WHITE 2
-#define SPAN 16
-int iBoard[SPAN-1][SPAN-1];
+#define SPAN 8
+int iBoard[SPAN][SPAN];
 int iMyside=0;
 int iEneside=0;
 char chGamestatus[10];
+//需要拓宽8->16
+int TopoBoard[SPAN][SPAN]={
+    { 90,-60, 10, 10, 10, 10,-60, 90},
+    {-60,-80,  5,  5,  5,  5,-80,-60},
+    { 10,  5,  1,  1,  1,  1,  5, 10},
+    { 10,  5,  1,  1,  1,  1,  5, 10},
+    { 10,  5,  1,  1,  1,  1,  5, 10},
+    { 10,  5,  1,  1,  1,  1,  5, 10},
+    {-60,-80,  5,  5,  5,  5,-80,-60},
+    { 90,-60, 10, 10, 10, 10,-60, 90}
+};
 
-//估值函数
-void fnEVA(){
-    ;
+//测试用
+void fnPrintBoard(){
+    int i;
+    int j;
+    for(i=0;i<=SPAN-1;i++){
+        for(j=0;j<=SPAN-1;j++){
+            printf("%d ",iBoard[i][j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
 }
 
-//alpha beta 剪枝
-void fnABP(){
-    ;
+//估值函数
+int fnEVA(){
+    int iTotal=0;
+    //地势因素
+    int iRow,iCol;
+    for(iRow=0;iRow<=SPAN-1;iRow++){
+        for(iCol=0;iCol<=SPAN-1;iCol++){
+            if(iBoard[iRow][iCol]==iMyside){
+                ;
+            }
+        }
+    }
+    return iTotal;
 }
 
 //调整检查函数
@@ -102,6 +131,9 @@ int fnRevcount(int iRow,int iCol,int iSide,void (*direction)(int *,int *)){
 
 //落子是否能翻转
 bool fnAblecheck(int iRow,int iCol,int iSide){
+    if(iBoard[iRow][iCol]!=NONE){
+        return false;
+    }
     if(fnRevcount(iRow,iCol,iSide,U)>=1
        ||fnRevcount(iRow,iCol,iSide,UL)>=1
        ||fnRevcount(iRow,iCol,iSide,L)>=1
@@ -119,19 +151,91 @@ bool fnAblecheck(int iRow,int iCol,int iSide){
     }
 }
 
+int fnFlipone(int iRow,int iCol,int iSide,void (*direction)(int *,int *)){
+    int iTurn=fnRevcount(iRow,iCol,iSide,direction);
+    int iCount=iTurn;
+    if(iCount>=1){
+        for(;iCount>0;iCount--){
+            (direction)(&iRow,&iCol);
+            iBoard[iRow][iCol]=iSide;
+        }
+    }
+    return iTurn;
+}
+
+int iU,iUL,iL,iDL,iD,iDR,iR,iUR;
+//模拟下子
+void fnFlip(int iRow,int iCol,int iSide){
+    iBoard[iRow][iCol]=iSide;
+    iU=fnFlipone(iRow,iCol,iSide,U);
+    iUL=fnFlipone(iRow,iCol,iSide,UL);
+    iL=fnFlipone(iRow,iCol,iSide,L);
+    iDL=fnFlipone(iRow,iCol,iSide,DL);
+    iD=fnFlipone(iRow,iCol,iSide,D);
+    iDR=fnFlipone(iRow,iCol,iSide,DR);
+    iR=fnFlipone(iRow,iCol,iSide,R);
+    iUR=fnFlipone(iRow,iCol,iSide,UR);
+}
+//撤销下子
+void fnUnFlipone(int iRow,int iCol,int iSide,int iTurn,void (*direction)(int *,int *)){
+    if(iSide==WHITE){
+        for(;iTurn>0;iTurn--){
+            (direction)(&iRow,&iCol);
+            iBoard[iRow][iCol]=BLACK;
+        }
+    }
+    else if(iSide==BLACK){
+        for(;iTurn>0;iTurn--){
+            (direction)(&iRow,&iCol);
+            iBoard[iRow][iCol]=WHITE;
+        }
+    }
+}
+
+void fnUnFlip(int iRow,int iCol,int iSide){
+    iBoard[iRow][iCol]=NONE;
+    fnUnFlipone(iRow,iCol,iSide,iU,U);
+    fnUnFlipone(iRow,iCol,iSide,iUL,UL);
+    fnUnFlipone(iRow,iCol,iSide,iL,L);
+    fnUnFlipone(iRow,iCol,iSide,iDL,DL);
+    fnUnFlipone(iRow,iCol,iSide,iD,D);
+    fnUnFlipone(iRow,iCol,iSide,iDR,DR);
+    fnUnFlipone(iRow,iCol,iSide,iR,R);
+    fnUnFlipone(iRow,iCol,iSide,iUR,UR);
+}
+
+
+//alpha beta 剪枝
+void fnABP(){
+    ;
+}
+
 //下棋
 void fnPlace(){
     /*输出标准格式
      printf("6 7\n");
      fflush(stdout);
      */
+    ;
+    /*随机落子*/
     int iRow,iCol;
-    for(iRow=0,iCol=0;iRow<=SPAN-1&&iCol<=SPAN-1;iRow++,iCol++){
-        //随机函数
-        if(fnAblecheck(iRow,iCol,iMyside)){
-            printf("%d %d\n",iRow,iCol);
+    bool temp=false;
+    for(iRow=0;iRow<=SPAN-1;iRow++){
+        for(iCol=0;iCol<=SPAN-1;iCol++){
+            if(fnAblecheck(iRow,iCol,iMyside)){
+                printf("%d %d\n",iRow,iCol);
+                fflush(stdout);
+                fnFlip(iRow,iCol,iMyside);
+                //fnPrintBoard();
+                temp=true;
+                break;
+            }
+        }
+        if(temp==true){
+            break;
         }
     }
+    /**/
 }
 
 //回复stdin
@@ -144,7 +248,10 @@ void fnReply(){
         //enemy's turn,record
         int iRow,iCol;
         scanf("%d %d",&iRow,&iCol);
-        iBoard[iRow][iCol]=iEneside;
+        fnFlip(iRow,iCol,iEneside);
+        //fnPrintBoard();
+        /*fnUnFlip(iRow, iCol, iEneside);
+        fnPrintBoard();*/
     }
     else if(strcmp(chGamestatus,"START")==0){
         //game start,prepare and reply
@@ -160,23 +267,14 @@ void fnReply(){
     }
 }
 
-
-//模拟下子
-void fnMove(){
-    ;
-}
-//撤销下子
-void fnUnmove(){
-    ;
-}
-
 int main(int argc, const char * argv[]) {
     //声明函数或变量
     
     //初始化棋盘
     memset(iBoard,0,sizeof(iBoard));
-    iBoard[8][8]=iBoard[9][9]=WHITE;
-    iBoard[8][9]=iBoard[9][8]=BLACK;
+    iBoard[SPAN/2-1][SPAN/2-1]=iBoard[SPAN/2][SPAN/2]=WHITE;
+    iBoard[SPAN/2-1][SPAN/2]=iBoard[SPAN/2][SPAN/2-1]=BLACK;
+    //fnPrintBoard();
     
     //设置估值函数基本参数
     
